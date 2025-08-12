@@ -1,0 +1,984 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>宝宝喝奶记录</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
+    <link rel="icon" href="breast-milk-icon.png" type="image/png">
+    <style>
+        .skeuomorphic-card {
+            background: linear-gradient(145deg, #f0f4f8, #d6e8f5);
+            box-shadow: 8px 8px 16px #c8d6e5, -8px -8px 16px #ffffff;
+            border-radius: 20px;
+        }
+        
+        .skeuomorphic-input {
+            background: linear-gradient(145deg, #ffffff, #f1f5f9);
+            box-shadow: inset 4px 4px 8px #d1d9e6, inset -4px -4px 8px #ffffff;
+            border: none;
+            border-radius: 12px;
+        }
+        
+        .skeuomorphic-button {
+            background: linear-gradient(145deg, #3b82f6, #2563eb);
+            box-shadow: 6px 6px 12px #c8d6e5, -6px -6px 12px #ffffff;
+            border: none;
+            border-radius: 12px;
+            transition: all 0.2s;
+        }
+        
+        .skeuomorphic-button:hover {
+            box-shadow: 4px 4px 8px #c8d6e5, -4px -4px 8px #ffffff;
+            transform: translateY(1px);
+        }
+        
+        .skeuomorphic-button:active {
+            box-shadow: inset 2px 2px 4px #1e40af, inset -2px -2px 4px #60a5fa;
+        }
+        
+        .tab-button {
+            background: linear-gradient(145deg, #e2e8f0, #cbd5e1);
+            box-shadow: 4px 4px 8px #c8d6e5, -4px -4px 8px #ffffff;
+            border-radius: 12px 12px 0 0;
+        }
+        
+        .tab-button.active {
+            background: linear-gradient(145deg, #f0f4f8, #d6e8f5);
+            box-shadow: inset 2px 2px 4px #c8d6e5;
+        }
+        
+        .record-item {
+            background: linear-gradient(145deg, #f8fafc, #e2e8f0);
+            box-shadow: 2px 2px 4px #c8d6e5, -2px -2px 4px #ffffff;
+            border-radius: 8px;
+        }
+        
+        .success-animation {
+            animation: pulse 0.5s ease-in-out;
+        }
+        
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+            100% { transform: scale(1); }
+        }
+        
+        .toast-message {
+            position: fixed;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 1000;
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-weight: 500;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            animation: slideInDown 0.3s ease-out, fadeOut 0.3s ease-in 2.7s forwards;
+        }
+        
+        .toast-success {
+            background: linear-gradient(145deg, #10b981, #059669);
+            color: white;
+        }
+        
+        .toast-error {
+            background: linear-gradient(145deg, #ef4444, #dc2626);
+            color: white;
+        }
+        
+        @keyframes slideInDown {
+            from {
+                transform: translateX(-50%) translateY(-100%);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(-50%) translateY(0);
+                opacity: 1;
+            }
+        }
+        
+        @keyframes fadeOut {
+            from {
+                opacity: 1;
+            }
+            to {
+                opacity: 0;
+            }
+        }
+        
+        .delete-btn {
+            opacity: 0.7;
+            transition: all 0.2s ease;
+        }
+        
+        .delete-btn:hover {
+            opacity: 1;
+            transform: scale(1.05);
+        }
+        
+        .record-item:hover .delete-btn {
+            opacity: 1;
+        }
+    </style>
+</head>
+<body class="bg-gradient-to-br from-blue-50 to-indigo-100 min-h-screen p-4">
+    <div class="max-w-md mx-auto">
+        <!-- Tab Navigation -->
+        <!-- <div class="flex mb-6">
+            <button id="dataTab" class="tab-button active flex-1 py-3 px-6 text-gray-700 font-medium">
+                数据录入
+            </button>
+            <button id="chartTab" class="tab-button flex-1 py-3 px-6 text-gray-700 font-medium">
+                历史数据
+            </button>
+        </div> -->
+
+        <!-- Data Entry Tab -->
+        <div id="dataEntrySection" class="skeuomorphic-card p-6 mb-6">
+            <h1 class="text-2xl font-bold text-gray-800 mb-6 text-center">这次喝了多少奶</h1>
+            
+
+
+            <form id="dataForm" class="space-y-6">
+                <!-- Date Input -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">日期</label>
+                    <input type="date" id="dateInput" class="skeuomorphic-input w-full py-3 px-4 text-gray-700 focus:outline-none">
+                </div>
+
+                <!-- Time Input -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">时间</label>
+                    <input type="time" id="timeInput" class="skeuomorphic-input w-full py-3 px-4 text-gray-700 focus:outline-none">
+                </div>
+
+                <!-- Quantity Input -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">奶量 (毫升，每次上下调节10)</label>
+                    <div class="flex items-center space-x-2">
+                        <button type="button" id="decreaseBtn" class="skeuomorphic-button w-12 h-12 text-white font-bold text-xl">-</button>
+                        <input type="number" id="quantityInput" value="90" step="10" min="0" class="skeuomorphic-input flex-1 py-3 px-4 text-center text-gray-700 focus:outline-none">
+                        <button type="button" id="increaseBtn" class="skeuomorphic-button w-12 h-12 text-white font-bold text-xl">+</button>
+                    </div>
+                </div>
+
+                <!-- Remarks Checkbox -->
+                <div class="flex items-center space-x-3">
+                    <input type="checkbox" id="remarksCheckbox" class="w-5 h-5 text-blue-600 rounded focus:outline-none">
+                    <label for="remarksCheckbox" class="text-sm font-medium text-gray-700">本次是否母乳</label>
+                </div>
+
+                <!-- Submit Button -->
+                <button type="submit" id="submitBtn" class="skeuomorphic-button w-full py-4 text-white font-semibold text-lg">
+                    提交记录
+                </button>
+            </form>
+
+            <!-- Today's Records -->
+            <div class="mt-8">
+                <h3 class="text-lg font-semibold text-gray-800 mb-4">今日记录</h3>
+                <div id="todayRecords" class="space-y-2 max-h-60 overflow-y-auto">
+                    <!-- Records will be populated here -->
+                </div>
+                <div id="todayStats" class="mt-4 p-3 bg-blue-50 rounded-lg">
+                    <!-- Stats will be populated here -->
+                </div>
+            </div>
+        </div>
+
+        <!-- Chart Tab -->
+        <div id="chartSection" class="skeuomorphic-card p-6 hidden">
+            <h1 class="text-2xl font-bold text-gray-800 mb-6 text-center">过去7天数据</h1>
+            <div class="mb-4">
+                <button id="refreshHistoryBtn" class="skeuomorphic-button py-2 px-4 text-white text-sm">
+                    刷新历史数据
+                </button>
+            </div>
+            <div class="bg-white rounded-lg p-4 shadow-inner">
+                <canvas id="dataChart" width="400" height="300"></canvas>
+            </div>
+        </div>
+
+        <!-- Settings -->
+        <div class="skeuomorphic-card p-4 mt-4">
+            <h3 class="text-sm font-semibold text-gray-700 mb-2">设置</h3>
+            <div class="space-y-3">
+                <div>
+                    <label class="block text-xs text-gray-600 mb-1">提交数据 API (POST)</label>
+                    <input type="url" id="apiUrl" value="https://www.feishu.cn/flow/api/trigger-webhook/xxxxx" placeholder="提交数据的API端点" 
+                           class="skeuomorphic-input w-full py-2 px-3 text-sm text-gray-600 focus:outline-none">
+                </div>
+                <!-- 默认奶量设置 -->
+                <div>
+                    <label class="block text-xs text-gray-600 mb-1">默认奶量 (毫升)</label>
+                    <input type="number" id="defaultQuantity" value="90" min="0" step="10" 
+                           class="skeuomorphic-input w-full py-2 px-3 text-sm text-gray-600 focus:outline-none">
+                    <p class="text-xs text-gray-500 mt-1">设置每次记录的默认奶量</p>
+                </div>
+                
+                <!-- 宝宝名字设置 -->
+                <div>
+                    <label class="block text-xs text-gray-600 mb-1">宝宝名字</label>
+                    <input type="text" id="babyName" placeholder="请输入宝宝名字" 
+                           class="skeuomorphic-input w-full py-2 px-3 text-sm text-gray-600 focus:outline-none">
+                    <p class="text-xs text-gray-500 mt-1">设置宝宝名字，将显示在标题前</p>
+                </div>
+                
+                <!-- 保存设置按钮 -->
+                <button id="saveSettingsBtn" class="skeuomorphic-button py-2 px-4 text-white text-sm bg-green-500 hover:bg-green-600">
+                    保存设置
+                </button>
+                
+                <hr class="border-gray-300 my-3">
+                
+                <!-- API失败时保存到本地选项 -->
+                <div class="flex items-center space-x-3">
+                    <input type="checkbox" id="saveOnApiFail" class="w-4 h-4 text-blue-600 rounded focus:outline-none">
+                    <label for="saveOnApiFail" class="text-xs text-gray-600">API失败时仍保存到本地</label>
+                </div>
+                <p class="text-xs text-gray-500">勾选后，即使API调用失败也会保存记录到本地存储</p>
+                
+                <!-- <div>
+                    <label class="block text-xs text-gray-600 mb-1">获取历史数据 API (GET)</label>
+                    <input type="url" id="historyApiUrl" placeholder="获取历史数据的API端点" 
+                           class="skeuomorphic-input w-full py-2 px-3 text-sm text-gray-600 focus:outline-none">
+                </div> -->
+                <!-- <div class="flex space-x-2">
+                    <button id="clearDataBtn" class="skeuomorphic-button py-2 px-4 text-white text-sm bg-red-500 hover:bg-red-600">
+                        清除本地数据
+                    </button>
+                    <button id="exportDataBtn" class="skeuomorphic-button py-2 px-4 text-white text-sm bg-green-500 hover:bg-green-600">
+                        导出数据
+                    </button>
+                    <button id="importDataBtn" class="skeuomorphic-button py-2 px-4 text-white text-sm bg-blue-500 hover:bg-blue-600">
+                        导入数据
+                    </button>
+                </div> -->
+                <input type="file" id="importFileInput" accept=".json" style="display: none;">
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Global variables
+        let allRecords = [];
+        let chart = null;
+        let settings = {
+            defaultQuantity: 90,
+            babyName: '',
+            saveOnApiFail: false
+        };
+
+        // Initialize the application
+        document.addEventListener('DOMContentLoaded', function() {
+            loadSettings();
+            initializeDateTime();
+            loadLocalData(); // 先加载本地数据，避免事件绑定错误中断后续流程
+            setupEventListeners();
+            updateTitle();
+            // loadHistoricalData();
+            updateTodayRecords();
+        });
+
+        // Load data from localStorage
+        function loadLocalData() {
+            try {
+                const savedData = localStorage.getItem('milkRecords');
+                if (savedData) {
+                    allRecords = JSON.parse(savedData);
+                    console.log('从本地存储加载了', allRecords.length, '条记录');
+                }
+            } catch (error) {
+                console.error('加载本地数据失败:', error);
+                allRecords = [];
+            }
+        }
+
+        // Save data to localStorage
+        function saveLocalData() {
+            try {
+                localStorage.setItem('milkRecords', JSON.stringify(allRecords));
+                console.log('数据已保存到本地存储');
+            } catch (error) {
+                console.error('保存本地数据失败:', error);
+            }
+        }
+
+        // Load settings from localStorage
+        function loadSettings() {
+            try {
+                const savedSettings = localStorage.getItem('milkSettings');
+                if (savedSettings) {
+                    settings = { ...settings, ...JSON.parse(savedSettings) };
+                }
+                
+                // 更新设置界面
+                document.getElementById('defaultQuantity').value = settings.defaultQuantity;
+                document.getElementById('babyName').value = settings.babyName;
+                document.getElementById('saveOnApiFail').checked = settings.saveOnApiFail;
+                
+                // 更新默认奶量输入框
+                document.getElementById('quantityInput').value = settings.defaultQuantity;
+                
+                console.log('设置已加载:', settings);
+            } catch (error) {
+                console.error('加载设置失败:', error);
+            }
+        }
+
+        // Save settings to localStorage
+        function saveSettings() {
+            try {
+                settings.defaultQuantity = parseInt(document.getElementById('defaultQuantity').value) || 90;
+                settings.babyName = document.getElementById('babyName').value.trim();
+                settings.saveOnApiFail = document.getElementById('saveOnApiFail').checked;
+                
+                localStorage.setItem('milkSettings', JSON.stringify(settings));
+                
+                // 更新默认奶量输入框
+                document.getElementById('quantityInput').value = settings.defaultQuantity;
+                
+                console.log('设置已保存:', settings);
+                return true;
+            } catch (error) {
+                console.error('保存设置失败:', error);
+                return false;
+            }
+        }
+
+        // Update title with baby name
+        function updateTitle() {
+            const h1Element = document.querySelector('h1');
+            if (h1Element) {
+                const originalText = '这次喝了多少奶';
+                if (settings.babyName) {
+                    h1Element.textContent = `${settings.babyName} ${originalText}`;
+                } else {
+                    h1Element.textContent = originalText;
+                }
+            }
+        }
+
+        // 获取本地时区的 YYYY-MM-DD 字符串
+        function getLocalDateString(date = new Date()) {
+            const year = date.getFullYear();
+            const month = String(date.getMonth() + 1).padStart(2, '0');
+            const day = String(date.getDate()).padStart(2, '0');
+            return `${year}-${month}-${day}`;
+        }
+
+        // Initialize date and time inputs with current values
+        function initializeDateTime() {
+            const now = new Date();
+            const dateStr = getLocalDateString(now);
+            const timeStr = now.toTimeString().slice(0, 5);
+            
+            document.getElementById('dateInput').value = dateStr;
+            document.getElementById('timeInput').value = timeStr;
+        }
+
+        // Setup all event listeners
+        function setupEventListeners() {
+            // Tab switching
+            // document.getElementById('dataTab').addEventListener('click', () => switchTab('data'));
+            // document.getElementById('chartTab').addEventListener('click', () => switchTab('chart'));
+
+            // Quantity controls
+            document.getElementById('decreaseBtn').addEventListener('click', () => adjustQuantity(-10));
+            document.getElementById('increaseBtn').addEventListener('click', () => adjustQuantity(10));
+
+            // Form submission
+            document.getElementById('dataForm').addEventListener('submit', handleFormSubmit);
+            
+            // Refresh history data（存在时才绑定）
+            const refreshBtn = document.getElementById('refreshHistoryBtn');
+            if (refreshBtn) {
+                refreshBtn.addEventListener('click', async () => {
+                    refreshBtn.disabled = true;
+                    refreshBtn.textContent = '刷新中...';
+                    try {
+                        await loadHistoricalData();
+                        updateChart();
+                    } finally {
+                        refreshBtn.disabled = false;
+                        refreshBtn.textContent = '刷新历史数据';
+                    }
+                });
+            }
+
+            // Clear local data（存在时才绑定）
+            const clearBtn = document.getElementById('clearDataBtn');
+            if (clearBtn) {
+                clearBtn.addEventListener('click', () => {
+                    if (confirm('确定要清除所有本地数据吗？此操作不可恢复。')) {
+                        allRecords = [];
+                        localStorage.removeItem('milkRecords');
+                        updateTodayRecords();
+                        showToast('本地数据已清除', 'success');
+                    }
+                });
+            }
+
+            // Export data（存在时才绑定）
+            const exportBtn = document.getElementById('exportDataBtn');
+            if (exportBtn) {
+                exportBtn.addEventListener('click', () => {
+                    if (allRecords.length === 0) {
+                        showToast('没有数据可导出', 'error');
+                        return;
+                    }
+                    const dataStr = JSON.stringify(allRecords, null, 2);
+                    const blob = new Blob([dataStr], { type: 'application/json' });
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = `milk-records-${getLocalDateString(new Date())}.json`;
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
+                    URL.revokeObjectURL(url);
+                    showToast('数据导出成功', 'success');
+                });
+            }
+
+            // Save settings button
+            const saveSettingsBtn = document.getElementById('saveSettingsBtn');
+            if (saveSettingsBtn) {
+                saveSettingsBtn.addEventListener('click', () => {
+                    if (saveSettings()) {
+                        updateTitle();
+                        showToast('设置已保存', 'success');
+                    } else {
+                        showToast('保存设置失败', 'error');
+                    }
+                });
+            }
+
+            // Import data（存在时才绑定）
+            const importBtn = document.getElementById('importDataBtn');
+            const importFileInput = document.getElementById('importFileInput');
+            if (importBtn && importFileInput) {
+                importBtn.addEventListener('click', () => {
+                    importFileInput.click();
+                });
+            }
+            if (importFileInput) {
+                importFileInput.addEventListener('change', (event) => {
+                    const file = event.target.files[0];
+                    if (!file) return;
+                    const reader = new FileReader();
+                    reader.onload = (e) => {
+                        try {
+                            const importedData = JSON.parse(e.target.result);
+                            if (Array.isArray(importedData)) {
+                                allRecords = importedData;
+                                saveLocalData();
+                                updateTodayRecords();
+                                showToast(`成功导入 ${importedData.length} 条记录`, 'success');
+                            } else {
+                                showToast('导入的文件格式不正确', 'error');
+                            }
+                        } catch (error) {
+                            showToast('导入文件解析失败', 'error');
+                        }
+                    };
+                    reader.readAsText(file);
+                    event.target.value = ''; // 清空文件输入
+                });
+            }
+        }
+
+        // Switch between tabs
+        function switchTab(tab) {
+            const dataTab = document.getElementById('dataTab');
+            const chartTab = document.getElementById('chartTab');
+            const dataSection = document.getElementById('dataEntrySection');
+            const chartSection = document.getElementById('chartSection');
+
+            if (tab === 'data') {
+                dataTab.classList.add('active');
+                chartTab.classList.remove('active');
+                dataSection.classList.remove('hidden');
+                chartSection.classList.add('hidden');
+                updateTodayRecords();
+            } else {
+                chartTab.classList.add('active');
+                dataTab.classList.remove('active');
+                chartSection.classList.remove('hidden');
+                dataSection.classList.add('hidden');
+                
+                // 切换到图表时自动刷新数据
+                loadHistoricalData().then(() => {
+                    updateChart();
+                });
+            }
+        }
+
+        // Adjust quantity value
+        function adjustQuantity(change) {
+            const input = document.getElementById('quantityInput');
+            const currentValue = parseInt(input.value) || 90;
+            const newValue = Math.max(0, currentValue + change);
+            input.value = newValue;
+        }
+
+        // Handle form submission
+        async function handleFormSubmit(e) {
+            e.preventDefault();
+            
+            const submitBtn = document.getElementById('submitBtn');
+            
+            // Disable submit button
+            submitBtn.disabled = true;
+            submitBtn.textContent = '提交中...';
+
+            // Collect form data
+            // 提交数据的JSON格式：
+            // {
+            //     "date": "2024-01-15",           // 日期 (YYYY-MM-DD)
+            //     "time": "14:30",                // 时间 (HH:MM)
+            //     "quantity": 90,                 // 奶量 (毫升)
+            //     "remarks": true,                // 是否母乳 (布尔值)
+            //     "timestamp": "2024-01-15T14:30:00.000Z"  // ISO时间戳
+            // }
+            const dateInput = document.getElementById('dateInput').value;
+            const timeInput = document.getElementById('timeInput').value;
+            const quantityInput = parseInt(document.getElementById('quantityInput').value);
+            const remarksInput = document.getElementById('remarksCheckbox').checked;
+            
+            // 验证数据
+            if (!dateInput || !timeInput || isNaN(quantityInput)) {
+                throw new Error('请填写完整的日期、时间和奶量');
+            }
+            
+            const formData = {
+                date: dateInput,
+                time: timeInput,
+                quantity: quantityInput,
+                remarks: remarksInput,
+                // 增加时间戳
+                timestamp: new Date().toLocaleString('zh-CN', { timeZone: 'Asia/Shanghai' })
+            };
+            
+            // 调试：打印收集到的数据
+            console.log('收集到的表单数据:', {
+                dateInput,
+                timeInput,
+                quantityInput,
+                remarksInput
+            });
+
+            try {
+                // Real API call to webhook
+                await simulateApiCall(formData);
+                
+                // API调用成功，添加到本地记录
+                allRecords.push(formData);
+                saveLocalData(); // 保存到本地存储
+                
+                // Show success toast
+                showToast('数据提交成功！', 'success');
+                
+                // Reset form
+                document.getElementById('quantityInput').value = settings.defaultQuantity;
+                document.getElementById('remarksCheckbox').checked = false;
+                initializeDateTime();
+                
+                // Update today's records
+                updateTodayRecords();
+                
+            } catch (error) {
+                // Show error toast
+                showToast(error.message || '提交失败，请重试', 'error');
+                
+                // 根据设置决定是否在API失败时保存到本地
+                if (settings.saveOnApiFail) {
+                    allRecords.push(formData);
+                    saveLocalData();
+                    showToast('API调用失败，但数据已保存到本地', 'error');
+                    updateTodayRecords();
+                }
+            } finally {
+                // Re-enable submit button
+                submitBtn.disabled = false;
+                submitBtn.textContent = '提交记录';
+            }
+        }
+
+        // Real API call to webhook
+        async function simulateApiCall(data) {
+            const apiUrl = document.getElementById('apiUrl').value;
+            
+            if (!apiUrl || apiUrl.trim() === '') {
+                throw new Error('请先设置API地址');
+            }
+            
+            // 检查是否使用了默认值
+            const isUsingDefaultApi = apiUrl.includes('xxxxx');
+            if (isUsingDefaultApi) {
+                throw new Error('请修改为您的实际API地址，当前使用的是默认地址');
+            }
+            
+            // 调试：打印发送的数据
+            console.log('发送的数据:', data);
+            console.log('API地址:', apiUrl);
+            
+            try {
+                // 直接使用 no-cors 模式
+                const response = await fetch(apiUrl, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    mode: 'no-cors',
+                    body: JSON.stringify(data)
+                });
+                
+                console.log('no-cors模式请求成功');
+                return { success: true, data: data };
+                
+            } catch (error) {
+                console.error('API调用失败:', error);
+                throw new Error(`请求失败: ${error.message}`);
+            }
+        }
+
+        // Load historical data (simulate GET request)
+        // async function loadHistoricalData() {
+        //     try {
+        //         const historyApiUrl = document.getElementById('historyApiUrl').value;
+                
+        //         // 如果没有配置历史数据API，跳过
+        //         if (!historyApiUrl || historyApiUrl.trim() === '') {
+        //             console.log('未配置历史数据API，跳过加载');
+        //             return;
+        //         }
+                
+        //         console.log('正在加载历史数据...');
+        //         console.log('历史数据API地址:', historyApiUrl);
+                
+        //         const response = await fetch(historyApiUrl, {
+        //             method: 'GET',
+        //             headers: {
+        //                 'Accept': 'application/json'
+        //             }
+        //         });
+                
+        //         if (!response.ok) {
+        //             throw new Error(`HTTP错误: ${response.status} ${response.statusText}`);
+        //         }
+                
+        //         const data = await response.json();
+        //         console.log('获取到的历史数据:', data);
+                
+        //         // 更新全局数据
+        //         allRecords = data;
+                
+        //         // 更新今日记录显示
+        //         updateTodayRecords();
+                
+        //     } catch (error) {
+        //         console.error('加载历史数据失败:', error);
+        //         // 不显示错误消息，因为这是后台加载
+        //     }
+        // }
+
+        // Generate sample data for demo
+        // function generateSampleData() {
+        //     const data = [];
+        //     const today = new Date();
+        //     
+        //     for (let i = 6; i >= 0; i--) {
+        //         const date = new Date(today);
+        //         date.setDate(date.getDate() - i);
+        //         const dateStr = date.toISOString().split('T')[0];
+        //         
+        //         // Generate 2-5 random entries per day
+        //         const numEntries = Math.floor(Math.random() * 4) + 2;
+        //         for (let j = 0; j < numEntries; j++) {
+        //             const hour = Math.floor(Math.random() * 24);
+        //             const minute = Math.floor(Math.random() * 60);
+        //             const quantity = 90 + (Math.floor(Math.random() * 5) - 2) * 10;
+        //             
+        //             data.push({
+        //                 date: dateStr,
+        //                 time: `${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`,
+        //                 quantity: quantity,
+        //                 remarks: Math.random() > 0.8,
+        //                 timestamp: new Date(date.getFullYear(), date.getMonth(), date.getDate(), hour, minute).toISOString()
+        //             });
+        //         }
+        //     }
+        //     
+        //     return data.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
+        // }
+
+        // 根据 record.date + record.time 生成本地时间
+        function getRecordDateTimeLocal(record) {
+            try {
+                if (record && typeof record.date === 'string' && typeof record.time === 'string') {
+                    const [y, m, d] = record.date.split('-').map(Number);
+                    const [hh, mm] = record.time.split(':').map(Number);
+                    if ([y, m, d, hh, mm].every(n => Number.isFinite(n))) {
+                        return new Date(y, m - 1, d, hh, mm, 0, 0);
+                    }
+                }
+                return record.timestamp ? new Date(record.timestamp) : new Date();
+            } catch (_) {
+                return new Date();
+            }
+        }
+
+        // 计算从给定时间到现在的“x小时y分钟”字符串（不实时刷新，进入页面或刷新列表时计算）
+        function getElapsedHoursMinutesLabel(fromDate) {
+            const now = new Date();
+            let diffMs = now - fromDate;
+            if (!Number.isFinite(diffMs) || diffMs < 0) diffMs = 0;
+            const hours = Math.floor(diffMs / 3600000);
+            const minutes = Math.floor((diffMs % 3600000) / 60000);
+            return `${hours}小时${minutes}分钟`;
+        }
+
+        // Update today's records display
+        function updateTodayRecords() {
+            const today = getLocalDateString(new Date());
+            const container = document.getElementById('todayRecords');
+            const statsContainer = document.getElementById('todayStats');
+            
+            // 检查API返回的是否为每天的总量数据
+            if (allRecords.length > 0 && allRecords[0].hasOwnProperty('total')) {
+                // API返回的是每天的总量数据，今日记录需要单独获取
+                const todayData = allRecords.find(dayData => dayData.date === today);
+                if (todayData) {
+                    container.innerHTML = `
+                        <div class="record-item p-3 flex justify-between items-center">
+                            <div>
+                                <span class="font-medium text-gray-800">今日总计</span>
+                                <span class="text-gray-600 mx-2">•</span>
+                                <span class="text-blue-600 font-semibold">${todayData.total}ml</span>
+                                <span class="text-gray-500 text-sm ml-2">(${todayData.count}次)</span>
+                            </div>
+                        </div>
+                    `;
+                } else {
+                    container.innerHTML = '<p class="text-gray-500 text-center py-4">今日暂无记录</p>';
+                }
+                return;
+            }
+            
+            // 兼容旧格式：显示详细的单条记录
+            const todayRecords = allRecords.filter(record => record.date === today);
+            if (todayRecords.length === 0) {
+                container.innerHTML = '<p class="text-gray-500 text-center py-4">今日暂无记录</p>';
+                statsContainer.innerHTML = '';
+                return;
+            }
+            
+            container.innerHTML = todayRecords
+                .sort((a, b) => getRecordDateTimeLocal(b) - getRecordDateTimeLocal(a))
+                .map((record, index) => {
+                    const elapsed = getElapsedHoursMinutesLabel(getRecordDateTimeLocal(record));
+                    return `
+                    <div class="record-item p-3 flex justify-between items-center">
+                        <div>
+                            <span class="font-medium text-gray-800">${record.time}</span>
+                            <span class="text-gray-600 mx-2">•</span>
+                            <span class="text-blue-600 font-semibold">${record.quantity}ml</span>
+                            ${record.remarks ? '<img src="breast-milk-icon.png" alt="母乳" class="ml-2 w-4 h-4 inline-block">' : ''}
+                            <span class="text-gray-500 text-xs ml-2">已过 ${elapsed}</span>
+                        </div>
+                        <button onclick="deleteRecord('${record.date}', '${record.time}', ${index})" 
+                                class="delete-btn text-yellow-500 hover:text-yellow-700 text-sm font-medium ml-2 px-2 py-1 rounded hover:bg-yellow-50 transition-colors">
+                            移除
+                        </button>
+                    </div>`;
+                })
+                .join('');
+
+            // 更新统计信息
+            const totalQuantity = todayRecords.reduce((sum, record) => sum + record.quantity, 0);
+            const breastMilkCount = todayRecords.filter(record => record.remarks).length;
+            const avgQuantity = Math.round(totalQuantity / todayRecords.length);
+            
+            statsContainer.innerHTML = `
+                <div class="grid grid-cols-3 gap-4 text-center">
+                    <div>
+                        <div class="text-lg font-bold text-blue-600">${totalQuantity}ml</div>
+                        <div class="text-xs text-gray-600">今日总量</div>
+                    </div>
+                    <div>
+                        <div class="text-lg font-bold text-green-600">${todayRecords.length}次</div>
+                        <div class="text-xs text-gray-600">今日次数</div>
+                    </div>
+                    <div>
+                        <div class="text-lg font-bold text-purple-600">${avgQuantity}ml</div>
+                        <div class="text-xs text-gray-600">平均每次</div>
+                    </div>
+                </div>
+                ${breastMilkCount > 0 ? `<div class="mt-2 text-center text-sm text-gray-600">其中母乳 ${breastMilkCount} 次</div>` : ''}
+            `;
+        }
+
+        // Update chart with 7-day data
+        function updateChart() {
+            const canvas = document.getElementById('dataChart');
+            const ctx = canvas.getContext('2d');
+            
+            // Get last 7 days data
+            const last7Days = getLast7DaysData();
+            const labels = last7Days.map(day => day.label);
+            const data = last7Days.map(day => day.total);
+            
+            // Destroy existing chart
+            if (chart) {
+                chart.destroy();
+            }
+            
+            // Create new chart
+            chart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: '总量 (ml)',
+                        data: data,
+                        backgroundColor: 'rgba(59, 130, 246, 0.8)',
+                        borderColor: 'rgba(59, 130, 246, 1)',
+                        borderWidth: 2,
+                        borderRadius: 8,
+                        borderSkipped: false,
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            display: false
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: {
+                                callback: function(value) {
+                                    return value + 'ml';
+                                }
+                            },
+                            grid: {
+                                color: 'rgba(0, 0, 0, 0.1)'
+                            }
+                        },
+                        x: {
+                            grid: {
+                                display: false
+                            }
+                        }
+                    },
+                    interaction: {
+                        intersect: false,
+                        mode: 'index'
+                    },
+                    plugins: {
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    return `总量: ${context.parsed.y}ml`;
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        // Show toast message
+        function showToast(message, type = 'success') {
+            // Remove existing toasts
+            const existingToasts = document.querySelectorAll('.toast-message');
+            existingToasts.forEach(toast => toast.remove());
+            
+            // Create new toast
+            const toast = document.createElement('div');
+            toast.className = `toast-message toast-${type}`;
+            toast.textContent = message;
+            
+            // Add to body
+            document.body.appendChild(toast);
+            
+            // Remove after 3 seconds
+            setTimeout(() => {
+                if (toast.parentNode) {
+                    toast.remove();
+                }
+            }, 3000);
+        }
+
+        // Delete single record
+        function deleteRecord(date, time, index) {
+            if (confirm('确定要删除这条记录吗？此操作不可恢复。')) {
+                try {
+                    // 找到要删除的记录
+                    const recordToDelete = allRecords.find(record => 
+                        record.date === date && record.time === time
+                    );
+                    
+                    if (recordToDelete) {
+                        // 从数组中移除记录
+                        const recordIndex = allRecords.indexOf(recordToDelete);
+                        if (recordIndex > -1) {
+                            allRecords.splice(recordIndex, 1);
+                            saveLocalData();
+                            updateTodayRecords();
+                            showToast('记录已删除', 'success');
+                        }
+                    } else {
+                        showToast('未找到要删除的记录', 'error');
+                    }
+                } catch (error) {
+                    console.error('删除记录失败:', error);
+                    showToast('删除记录失败', 'error');
+                }
+            }
+        }
+
+        // Get aggregated data for last 7 days
+        function getLast7DaysData() {
+            const result = [];
+            const today = new Date();
+            const dayNames = ['周日', '周一', '周二', '周三', '周四', '周五', '周六'];
+            
+            // 如果API返回的是每天的总量数据，直接使用
+            if (allRecords.length > 0 && allRecords[0].hasOwnProperty('total')) {
+                // API返回的是每天的总量数据
+                return allRecords.map((dayData, index) => ({
+                    date: dayData.date,
+                    label: index === 6 ? '今天' : dayNames[new Date(dayData.date).getDay()],
+                    total: dayData.total
+                }));
+            }
+            
+            // 兼容旧格式：从详细记录中计算每天总量
+            for (let i = 6; i >= 0; i--) {
+                const date = new Date(today);
+                date.setDate(date.getDate() - i);
+                const dateStr = getLocalDateString(date);
+                const dayName = dayNames[date.getDay()];
+                
+                const dayRecords = allRecords.filter(record => record.date === dateStr);
+                const total = dayRecords.reduce((sum, record) => sum + record.quantity, 0);
+                
+                result.push({
+                    date: dateStr,
+                    label: i === 0 ? '今天' : dayName,
+                    total: total
+                });
+            }
+            
+            return result;
+        }
+    </script>
+</body>
+</html>
