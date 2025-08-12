@@ -139,7 +139,12 @@
         <div id="dataEntrySection" class="skeuomorphic-card p-6 mb-6">
             <h1 class="text-2xl font-bold text-gray-800 mb-6 text-center">这次喝了多少奶</h1>
             
-
+            <!-- 添加切换按钮 -->
+            <div class="flex justify-center mb-4">
+                <button id="toggleChartBtn" class="skeuomorphic-button py-2 px-6 text-white text-sm">
+                    查看7日统计图表
+                </button>
+            </div>
 
             <form id="dataForm" class="space-y-6">
                 <!-- Date Input -->
@@ -190,14 +195,38 @@
 
         <!-- Chart Tab -->
         <div id="chartSection" class="skeuomorphic-card p-6 hidden">
-            <h1 class="text-2xl font-bold text-gray-800 mb-6 text-center">过去7天数据</h1>
-            <div class="mb-4">
-                <button id="refreshHistoryBtn" class="skeuomorphic-button py-2 px-4 text-white text-sm">
-                    刷新历史数据
+            <h1 class="text-2xl font-bold text-gray-800 mb-6 text-center">过去7天数据统计</h1>
+            
+            <!-- 切换回数据录入按钮 -->
+            <div class="flex justify-center mb-4">
+                <button id="backToDataBtn" class="skeuomorphic-button py-2 px-6 text-white text-sm bg-gray-500 hover:bg-gray-600">
+                    返回数据录入
                 </button>
             </div>
-            <div class="bg-white rounded-lg p-4 shadow-inner">
+            
+            <!-- 统计概览 -->
+            <div id="statsOverview" class="mb-6 grid grid-cols-2 gap-4">
+                <div class="bg-blue-50 p-4 rounded-lg text-center">
+                    <div class="text-2xl font-bold text-blue-600" id="total7Days">0ml</div>
+                    <div class="text-sm text-gray-600">7日总奶量</div>
+                </div>
+                <div class="bg-green-50 p-4 rounded-lg text-center">
+                    <div class="text-2xl font-bold text-green-600" id="total7DaysCount">0次</div>
+                    <div class="text-sm text-gray-600">7日总次数</div>
+                </div>
+            </div>
+            
+            <!-- 图表容器 -->
+            <div class="bg-white rounded-lg p-4 shadow-inner mb-4">
                 <canvas id="dataChart" width="400" height="300"></canvas>
+            </div>
+            
+            <!-- 详细数据表格 -->
+            <div class="bg-white rounded-lg p-4 shadow-inner">
+                <h3 class="text-lg font-semibold text-gray-800 mb-3">每日详细数据</h3>
+                <div id="dailyDetails" class="space-y-2">
+                    <!-- 每日数据将在这里显示 -->
+                </div>
             </div>
         </div>
 
@@ -205,11 +234,6 @@
         <div class="skeuomorphic-card p-4 mt-4">
             <h3 class="text-sm font-semibold text-gray-700 mb-2">设置</h3>
             <div class="space-y-3">
-                <div>
-                    <label class="block text-xs text-gray-600 mb-1">提交数据 API (POST)</label>
-                    <input type="url" id="apiUrl" value="https://www.feishu.cn/flow/api/trigger-webhook/xxxxx" placeholder="提交数据的API端点" 
-                           class="skeuomorphic-input w-full py-2 px-3 text-sm text-gray-600 focus:outline-none">
-                </div>
                 <!-- 默认奶量设置 -->
                 <div>
                     <label class="block text-xs text-gray-600 mb-1">默认奶量 (毫升)</label>
@@ -233,6 +257,11 @@
                 
                 <hr class="border-gray-300 my-3">
                 
+                <div>
+                    <label class="block text-xs text-gray-600 mb-1">提交数据 API (POST)</label>
+                    <input type="url" id="apiUrl" value="https://www.feishu.cn/flow/api/trigger-webhook/xxxxx" placeholder="提交数据的API端点" 
+                           class="skeuomorphic-input w-full py-2 px-3 text-sm text-gray-600 focus:outline-none">
+                </div>
                 <!-- API失败时保存到本地选项 -->
                 <div class="flex items-center space-x-3">
                     <input type="checkbox" id="saveOnApiFail" class="w-4 h-4 text-blue-600 rounded focus:outline-none">
@@ -240,22 +269,6 @@
                 </div>
                 <p class="text-xs text-gray-500">勾选后，即使API调用失败也会保存记录到本地存储</p>
                 
-                <!-- <div>
-                    <label class="block text-xs text-gray-600 mb-1">获取历史数据 API (GET)</label>
-                    <input type="url" id="historyApiUrl" placeholder="获取历史数据的API端点" 
-                           class="skeuomorphic-input w-full py-2 px-3 text-sm text-gray-600 focus:outline-none">
-                </div> -->
-                <!-- <div class="flex space-x-2">
-                    <button id="clearDataBtn" class="skeuomorphic-button py-2 px-4 text-white text-sm bg-red-500 hover:bg-red-600">
-                        清除本地数据
-                    </button>
-                    <button id="exportDataBtn" class="skeuomorphic-button py-2 px-4 text-white text-sm bg-green-500 hover:bg-green-600">
-                        导出数据
-                    </button>
-                    <button id="importDataBtn" class="skeuomorphic-button py-2 px-4 text-white text-sm bg-blue-500 hover:bg-blue-600">
-                        导入数据
-                    </button>
-                </div> -->
                 <input type="file" id="importFileInput" accept=".json" style="display: none;">
             </div>
         </div>
@@ -456,6 +469,22 @@
                 });
             }
 
+            // 切换图表按钮
+            const toggleChartBtn = document.getElementById('toggleChartBtn');
+            if (toggleChartBtn) {
+                toggleChartBtn.addEventListener('click', () => {
+                    switchToChart();
+                });
+            }
+
+            // 返回数据录入按钮
+            const backToDataBtn = document.getElementById('backToDataBtn');
+            if (backToDataBtn) {
+                backToDataBtn.addEventListener('click', () => {
+                    switchToData();
+                });
+            }
+
             // Import data（存在时才绑定）
             const importBtn = document.getElementById('importDataBtn');
             const importFileInput = document.getElementById('importFileInput');
@@ -490,7 +519,31 @@
             }
         }
 
-        // Switch between tabs
+        // Switch to chart view
+        function switchToChart() {
+            const dataSection = document.getElementById('dataEntrySection');
+            const chartSection = document.getElementById('chartSection');
+            
+            dataSection.classList.add('hidden');
+            chartSection.classList.remove('hidden');
+            
+            // 更新图表和统计信息
+            updateChartAndStats();
+        }
+
+        // Switch to data entry view
+        function switchToData() {
+            const dataSection = document.getElementById('dataEntrySection');
+            const chartSection = document.getElementById('chartSection');
+            
+            chartSection.classList.add('hidden');
+            dataSection.classList.remove('hidden');
+            
+            // 更新今日记录
+            updateTodayRecords();
+        }
+
+        // Switch between tabs (保留原有功能)
         function switchTab(tab) {
             const dataTab = document.getElementById('dataTab');
             const chartTab = document.getElementById('chartTab');
@@ -645,76 +698,6 @@
             }
         }
 
-        // Load historical data (simulate GET request)
-        // async function loadHistoricalData() {
-        //     try {
-        //         const historyApiUrl = document.getElementById('historyApiUrl').value;
-                
-        //         // 如果没有配置历史数据API，跳过
-        //         if (!historyApiUrl || historyApiUrl.trim() === '') {
-        //             console.log('未配置历史数据API，跳过加载');
-        //             return;
-        //         }
-                
-        //         console.log('正在加载历史数据...');
-        //         console.log('历史数据API地址:', historyApiUrl);
-                
-        //         const response = await fetch(historyApiUrl, {
-        //             method: 'GET',
-        //             headers: {
-        //                 'Accept': 'application/json'
-        //             }
-        //         });
-                
-        //         if (!response.ok) {
-        //             throw new Error(`HTTP错误: ${response.status} ${response.statusText}`);
-        //         }
-                
-        //         const data = await response.json();
-        //         console.log('获取到的历史数据:', data);
-                
-        //         // 更新全局数据
-        //         allRecords = data;
-                
-        //         // 更新今日记录显示
-        //         updateTodayRecords();
-                
-        //     } catch (error) {
-        //         console.error('加载历史数据失败:', error);
-        //         // 不显示错误消息，因为这是后台加载
-        //     }
-        // }
-
-        // Generate sample data for demo
-        // function generateSampleData() {
-        //     const data = [];
-        //     const today = new Date();
-        //     
-        //     for (let i = 6; i >= 0; i--) {
-        //         const date = new Date(today);
-        //         date.setDate(date.getDate() - i);
-        //         const dateStr = date.toISOString().split('T')[0];
-        //         
-        //         // Generate 2-5 random entries per day
-        //         const numEntries = Math.floor(Math.random() * 4) + 2;
-        //         for (let j = 0; j < numEntries; j++) {
-        //             const hour = Math.floor(Math.random() * 24);
-        //             const minute = Math.floor(Math.random() * 60);
-        //             const quantity = 90 + (Math.floor(Math.random() * 5) - 2) * 10;
-        //             
-        //             data.push({
-        //                 date: dateStr,
-        //                 time: `${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`,
-        //                 quantity: quantity,
-        //                 remarks: Math.random() > 0.8,
-        //                 timestamp: new Date(date.getFullYear(), date.getMonth(), date.getDate(), hour, minute).toISOString()
-        //             });
-        //         }
-        //     }
-        //     
-        //     return data.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
-        // }
-
         // 根据 record.date + record.time 生成本地时间
         function getRecordDateTimeLocal(record) {
             try {
@@ -821,6 +804,24 @@
             `;
         }
 
+        // Update chart and statistics
+        function updateChartAndStats() {
+            const last7Days = getLast7DaysData();
+            
+            // 更新统计概览
+            const total7Days = last7Days.reduce((sum, day) => sum + day.total, 0);
+            const total7DaysCount = last7Days.reduce((sum, day) => sum + (day.count || 0), 0);
+            
+            document.getElementById('total7Days').textContent = total7Days + 'ml';
+            document.getElementById('total7DaysCount').textContent = total7DaysCount + '次';
+            
+            // 更新图表
+            updateChart();
+            
+            // 更新每日详细数据
+            updateDailyDetails(last7Days);
+        }
+
         // Update chart with 7-day data
         function updateChart() {
             const canvas = document.getElementById('dataChart');
@@ -857,6 +858,18 @@
                     plugins: {
                         legend: {
                             display: false
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    const dayData = last7Days[context.dataIndex];
+                                    return [
+                                        `总量: ${context.parsed.y}ml`,
+                                        `次数: ${dayData.count || 0}次`,
+                                        `平均: ${dayData.count > 0 ? Math.round(context.parsed.y / dayData.count) : 0}ml`
+                                    ];
+                                }
+                            }
                         }
                     },
                     scales: {
@@ -880,15 +893,6 @@
                     interaction: {
                         intersect: false,
                         mode: 'index'
-                    },
-                    plugins: {
-                        tooltip: {
-                            callbacks: {
-                                label: function(context) {
-                                    return `总量: ${context.parsed.y}ml`;
-                                }
-                            }
-                        }
                     }
                 }
             });
@@ -944,6 +948,32 @@
             }
         }
 
+        // Update daily details display
+        function updateDailyDetails(last7Days) {
+            const container = document.getElementById('dailyDetails');
+            
+            container.innerHTML = last7Days.map(day => {
+                const avgQuantity = day.count > 0 ? Math.round(day.total / day.count) : 0;
+                return `
+                    <div class="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
+                        <div class="flex-1">
+                            <div class="font-medium text-gray-800">${day.label} (${day.date})</div>
+                            <div class="text-sm text-gray-600">
+                                总量: <span class="font-semibold text-blue-600">${day.total}ml</span> | 
+                                次数: <span class="font-semibold text-green-600">${day.count || 0}次</span> | 
+                                平均: <span class="font-semibold text-purple-600">${avgQuantity}ml</span>
+                            </div>
+                        </div>
+                        <div class="text-right">
+                            <div class="text-xs text-gray-500">
+                                ${day.total > 0 ? '✅' : '❌'} ${day.total > 0 ? '有记录' : '无记录'}
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
         // Get aggregated data for last 7 days
         function getLast7DaysData() {
             const result = [];
@@ -956,11 +986,12 @@
                 return allRecords.map((dayData, index) => ({
                     date: dayData.date,
                     label: index === 6 ? '今天' : dayNames[new Date(dayData.date).getDay()],
-                    total: dayData.total
+                    total: dayData.total,
+                    count: dayData.count || 0
                 }));
             }
             
-            // 兼容旧格式：从详细记录中计算每天总量
+            // 兼容旧格式：从详细记录中计算每天总量和次数
             for (let i = 6; i >= 0; i--) {
                 const date = new Date(today);
                 date.setDate(date.getDate() - i);
@@ -969,11 +1000,13 @@
                 
                 const dayRecords = allRecords.filter(record => record.date === dateStr);
                 const total = dayRecords.reduce((sum, record) => sum + record.quantity, 0);
+                const count = dayRecords.length;
                 
                 result.push({
                     date: dateStr,
                     label: i === 0 ? '今天' : dayName,
-                    total: total
+                    total: total,
+                    count: count
                 });
             }
             
