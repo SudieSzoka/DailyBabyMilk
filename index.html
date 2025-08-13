@@ -263,7 +263,7 @@
                 </div>
                 <!-- API失败时保存到本地选项 -->
                 <div class="flex items-center space-x-3">
-                    <input type="checkbox" id="saveOnApiFail" class="w-4 h-4 text-blue-600 rounded focus:outline-none">
+                    <input type="checkbox" id="saveOnApiFail" class="w-4 h-4 text-blue-600 rounded focus:outline-none" checked>
                     <label for="saveOnApiFail" class="text-xs text-gray-600">API失败时仍保存到本地</label>
                 </div>
                 <p class="text-xs text-gray-500">勾选后，即使API调用失败也会保存记录到本地存储</p>
@@ -654,7 +654,10 @@
                 if (settings.saveOnApiFail) {
                     allRecords.push(formData);
                     saveLocalData();
-                    showToast('API调用失败，但数据已保存到本地', 'error');
+                    showToast('API调用失败，但数据已保存到本地', { 
+                        backgroundColor: '#ff9800', // 橙色
+                        color: '#fff' 
+                        });
                     updateTodayRecords();
                 }
             } finally {
